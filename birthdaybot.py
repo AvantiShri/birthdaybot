@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from __future__ import absolute_import, division, print_function
 import os
 import time
@@ -29,7 +30,7 @@ anna_facts = [
 ]
 
 
-def parse_bot_commands(slack_events):
+def parse_bot_commands(slack_events, users):
     """
         Parses a list of events coming from the Slack RTM API to find bot commands.
         If a bot command is found, this function returns a tuple of command and channel.
@@ -37,14 +38,13 @@ def parse_bot_commands(slack_events):
     """
     for event in slack_events:
         if event["type"] == "message" and not "subtype" in event:
-            #if it's a DM...
             if (event['channel'][0]=='D'):
-                return event["text"], event["channel"]
+                return event["text"], event["channel"], event['user']
             #if it's a direct mention of the bot...
             user_id, message = parse_direct_mention(event["text"])
             if user_id == bot_id:
-                return message, event["channel"]
-    return None, None
+                return message, event["channel"], event['user']
+    return None, None, None
 
 def parse_direct_mention(message_text):
     """
@@ -68,7 +68,7 @@ def make_giphy_request(tag):
         if (len(c['data']) == 0):
             reply = "Hmm. Got no Giphy hits with that tag. Try 'cat'"
         else:
-            reply = c['data']['fixed_height_url'] 
+            reply = c['data']['fixed_height_downsampled_url'].replace("200_d","200") 
     return reply
 
 def handle_command(command, channel):
@@ -93,15 +93,26 @@ def handle_command(command, channel):
         text=response or default_response
     )
 
+def get_users():
+    response = slack_client.api_call("users.list")
+    users = dict([(x['id'], x['name']) for x in response['members']])
+    return users
+
 if __name__ == "__main__":
     if slack_client.rtm_connect(with_team_state=False):
         print("Bot connected and running!")
         # Read bot's user ID by calling Web API method `auth.test`
         bot_id = slack_client.api_call("auth.test")["user_id"]
+        users = get_users()
         while True:
-            command, channel = parse_bot_commands(slack_client.rtm_read())
+            command, channel, sender = parse_bot_commands(slack_client.rtm_read(), users)
             if command:
+                print(users[sender],"sent",command,"on channel",channel)
                 handle_command(command, channel)
+                slack_client.api_call(
+                    "chat.postMessage",
+                    channel="G8SM3BYUV",
+                    text=users[sender]+" sent "+command+" on channel "+channel)
             time.sleep(RTM_READ_DELAY)
     else:
         print("Connection failed. Exception traceback printed above.")
