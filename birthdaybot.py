@@ -68,7 +68,7 @@ def make_giphy_request(tag):
         if (len(c['data']) == 0):
             reply = "Hmm. Got no Giphy hits with that tag. Try 'cat'"
         else:
-            reply = c['data']['fixed_height_downsampled_url'] 
+            reply = c['data']['fixed_height_url'] 
     return reply
 
 def handle_command(command, channel):
