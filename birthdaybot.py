@@ -20,17 +20,15 @@ bot_id = None
 RTM_READ_DELAY = 1 # 1 second delay between reading from RTM
 MENTION_REGEX = "^<@(|[WU].+)>(.*)"
 
+#annafacts_file = "annafacts.txt"
+#f = open(annafacts_file, 'r')
+#anna_facts = [x.strip() for x in f]
+#f.close()
 
-anna_facts = [
-    "Anna has genetic immunity to Norovirus",
-    "Anna likes Trollhunter",
-    "Anna is fluent in English, Russian AND Spanish",
-    "Anna's sysadminning skillz are entirely self-taught",
-    "Anna has a cat named Samson Shcherbina",
-    "Anna knows how to shoot a crossbow",
-    "Anna is way cooler than you'll ever know",
-]
-
+#def refresh_annafacts_file():
+#    f = open(annafacts_file,'w')
+#    f.write("\n".join(anna_facts))
+#    f.close()
 
 def parse_bot_commands(slack_events, users):
     """
@@ -73,7 +71,7 @@ def make_giphy_request(tag):
             reply = c['data']['fixed_height_downsampled_url'].replace("200_d","200") 
     return reply
 
-def handle_command(command, channel):
+def handle_command(command, channel, sender):
     """
         Executes bot command if the command is known
     """
@@ -81,26 +79,29 @@ def handle_command(command, channel):
     default_response = "Not sure what you mean."
 
     # Finds and executes the given command, filling in response
-    response = None
+    #response = None
     # This is where you start to implement more commands!
-    if (command.lower() == "print all annafacts"):
-        response = "\n".join([str(x[0])+") "+x[1]
-                              for x in enumerate(anna_facts)])
-    elif (command.lower().startswith("add annafact: ")):
-        annafact = command[14:]
-        anna_facts.append(annafact) 
-        response  = "Anna fact '"+annafact+"' added!"
-    elif (command.lower().startswith("remove annafact ")):
-        try:
-            idx = int(command[16:])
-            del anna_facts[idx]
-            response = "Anna fact "+str(idx)+" removed."
-        except Exception as e:
-            response = "Error: "+str(sys.exc_info()[0])
-    elif ("anna" in command.lower()):
-        response = np.random.choice(anna_facts) 
-    else:
-        response = make_giphy_request(command)
+    #if (command.lower() == "print all annafacts"):
+    #    response = "\n".join([str(x[0])+") "+x[1]
+    #                          for x in enumerate(anna_facts)])
+    #elif (command.lower().startswith("add annafact: ")):
+    #    try:
+    #        annafact = command[14:]
+    #        anna_facts.append(annafact+" (added by "+sender+")") 
+    #        refresh_annafacts_file()
+    #        response  = "Anna fact '"+annafact+"' added!"
+    #    except Exception as e:
+    #        response = "Error: "+str(sys.exc_info()[0])
+    #elif (command.lower().startswith("remove annafact ")):
+    #    try:
+    #        idx = int(command[16:])
+    #        del anna_facts[idx]
+    #        response = "Anna fact "+str(idx)+" removed."
+    #        refresh_annafacts_file()
+    #    except Exception as e:
+    #        response = "Error: "+str(sys.exc_info()[0])
+    #else:
+    response = make_giphy_request(command)
 
     # Sends the response back to the channel
     slack_client.api_call(
@@ -123,23 +124,24 @@ if __name__ == "__main__":
         user_counts = defaultdict(lambda: 0)
 
         while True:
-            command, channel, sender = parse_bot_commands(slack_client.rtm_read(), users)
+            command, channel, senderid =\
+                parse_bot_commands(slack_client.rtm_read(), users)
             if command:
-                user_counts[sender] += 1
-                print(users[sender],"sent",command,"on channel",channel)
-                handle_command(command, channel)
+                user_counts[senderid] += 1
+                print(users[senderid],"sent",command,"on channel",channel)
+                handle_command(command, channel, users[senderid])
                 #post to 'log' channel for debugging
                 slack_client.api_call(
                     "chat.postMessage",
                     channel="G8SM3BYUV",
-                    text=users[sender]+" sent "+command+" on channel "+channel)
+                    text=users[senderid]+" sent "+command+" on channel "+channel)
 
-                if (user_counts[sender]%5 == 0):
+                if (user_counts[senderid]%5 == 0):
                     slack_client.api_call(
                         "chat.postMessage",
                         channel=channel,
-                        text=users[sender]+" you have sent "
-                             +str(user_counts[sender])+" messages to me."
+                        text=users[senderid]+" you have sent "
+                             +str(user_counts[senderid])+" messages to me."
                              +" No judgement.")
 
             time.sleep(RTM_READ_DELAY)
