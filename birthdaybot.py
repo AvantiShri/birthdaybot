@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import absolute_import, division, print_function
 import os
+import sys
 import time
 import re
 from slackclient import SlackClient
@@ -82,7 +83,21 @@ def handle_command(command, channel):
     # Finds and executes the given command, filling in response
     response = None
     # This is where you start to implement more commands!
-    if ("anna" in command or "Anna" in command):
+    if (command.lower() == "print all annafacts"):
+        response = "\n".join([str(x[0])+") "+x[1]
+                              for x in enumerate(anna_facts)])
+    elif (command.lower().startswith("add annafact: ")):
+        annafact = command[14:]
+        anna_facts.append(annafact) 
+        response  = "Anna fact '"+annafact+"' added!"
+    elif (command.lower().startswith("remove annafact ")):
+        try:
+            idx = int(command[16:])
+            del anna_facts[idx]
+            response = "Anna fact "+str(idx)+" removed."
+        except Exception as e:
+            response = "Error: "+str(sys.exc_info()[0])
+    elif ("anna" in command.lower()):
         response = np.random.choice(anna_facts) 
     else:
         response = make_giphy_request(command)
