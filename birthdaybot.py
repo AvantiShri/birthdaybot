@@ -7,6 +7,7 @@ from slackclient import SlackClient
 import numpy as np
 import requests
 import json
+from collections import defaultdict
 
 
 # instantiate Slack client
@@ -104,15 +105,28 @@ if __name__ == "__main__":
         # Read bot's user ID by calling Web API method `auth.test`
         bot_id = slack_client.api_call("auth.test")["user_id"]
         users = get_users()
+        user_counts = defaultdict(lambda: 0)
+
         while True:
             command, channel, sender = parse_bot_commands(slack_client.rtm_read(), users)
             if command:
+                user_counts[sender] += 1
                 print(users[sender],"sent",command,"on channel",channel)
                 handle_command(command, channel)
+                #post to 'log' channel for debugging
                 slack_client.api_call(
                     "chat.postMessage",
                     channel="G8SM3BYUV",
                     text=users[sender]+" sent "+command+" on channel "+channel)
+
+                if (user_counts[sender]%5 == 0):
+                    slack_client.api_call(
+                        "chat.postMessage",
+                        channel=channel,
+                        text=users[sender]+" you have sent "
+                             +str(user_counts[sender])+" messages to me."
+                             +" No judgement.")
+
             time.sleep(RTM_READ_DELAY)
     else:
         print("Connection failed. Exception traceback printed above.")
