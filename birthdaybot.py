@@ -107,6 +107,7 @@ def handle_command(command, channel, sender):
     slack_client.api_call(
         "chat.postMessage",
         channel=channel,
+        icon_emoji=":balloon:",
         text=response or default_response
     )
 
@@ -123,7 +124,13 @@ if __name__ == "__main__":
         users = get_users()
         user_counts = defaultdict(lambda: 0)
 
+        count = 0
         while True:
+            count += 1
+            if (count%1000 == 0):
+                #keep connection alive
+                slack_client.api_call("auth.test")
+                count = 0
             command, channel, senderid =\
                 parse_bot_commands(slack_client.rtm_read(), users)
             if command:
@@ -140,6 +147,7 @@ if __name__ == "__main__":
                     slack_client.api_call(
                         "chat.postMessage",
                         channel=channel,
+                        icon_emoji=":exclamation:",
                         text=users[senderid]+" you have sent "
                              +str(user_counts[senderid])+" messages to me."
                              +" No judgement.")
